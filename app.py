@@ -34,9 +34,10 @@ import google.generativeai as genai
 #   https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=SHEET_GID
 # SPREADSHEET_ID is the long string after /d/
 # SHEET_GID is the number after #gid= when you click each tab (JAF_Data, IAF_Data)
-SPREADSHEET_ID = "11yUcfa66UgRDn4nYgSJz8F_ShSzakE_-ElRBR9htZr8"
-JAF_GID = "329067337"                    # gid for the JAF_Data tab
-IAF_GID = "208521765"  # gid for the IAF_Data tab
+SPREADSHEET_ID = "PUT_YOUR_SPREADSHEET_ID_HERE"
+JAF_GID = "0"                    # gid for the JAF_Data tab
+IAF_GID = "PUT_IAF_TAB_GID_HERE"  # gid for the IAF_Data tab
+
 GEMINI_MODEL = "gemini-3.5-flash"  # current stable model as of Aug 2026; swap to "gemini-3.5-flash-lite" for higher free rate limits
 
 def csv_url(sheet_id, gid):
@@ -77,6 +78,13 @@ with st.sidebar:
         st.rerun()
     st.caption("Data auto-refreshes every 10 minutes, or click above to force it.")
 
+    st.divider()
+    if st.button("🗑️ Clear conversation"):
+        st.session_state.messages = []
+        st.rerun()
+    st.caption("Chat history is kept for this session only -- it resets if you reload the page or close the tab.")
+
+
 # ==== GEMINI CLIENT ====
 if "GEMINI_API_KEY" not in st.secrets:
     st.error("GEMINI_API_KEY is not set in Streamlit secrets. Add it under App Settings -> Secrets.")
@@ -84,11 +92,25 @@ if "GEMINI_API_KEY" not in st.secrets:
 
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-SYSTEM_PROMPT = """You are CAIRA, the Career Advancement placement assistant for BITS Pilani students.
+SYSTEM_PROMPT = """You are CAIRA (Career Advancement Intelligent Resource Assistant), the placement
+assistant for BITS Pilani students, built by the Career Advancement unit. Students come to you to
+quickly understand their options -- which companies they're eligible for, what a role actually needs,
+what it pays -- so they can make confident decisions about their placements and internships.
 
 You answer questions about company JAFs (Full-Time Placement job application forms) and
 IAFs (Summer Internship application forms) -- covering CTC, eligible branches/courses,
 CGPA cutoff, sector, eligibility criteria, gender/backlog policy, and related fields.
+
+TONE AND VOICE:
+- Write like a sharp, encouraging placement counselor -- not a database dump. Full, natural sentences,
+  not just fragmented bullet lists for everything. Bullets are fine for genuinely multi-item info
+  (e.g. listing several branches or several roles), but weave the rest into clear, confident prose.
+- Be warm and motivating where it fits naturally (e.g. when a student qualifies for something, or is
+  asking about a strong opportunity) -- without being over-the-top or padding answers with fluff.
+- Sound like you understand placements, not like you're reading field labels aloud. E.g. instead of
+  "CTC: INR 1250000", say something like "This role pays INR 12,50,000 -- among the stronger offers
+  in this list."
+- Stay concise. Motivating and natural does not mean longer -- get to the point, just phrase it well.
 
 CRITICAL RULES:
 - Answer ONLY using the data provided below. Do not guess, infer, or use outside knowledge about companies.
@@ -99,7 +121,23 @@ CRITICAL RULES:
 - If a company has multiple entries (e.g. multiple roles), list all of them or ask which role they mean.
 - Quote CTC, CGPA cutoff, and other values EXACTLY as they appear in the data below -- do not round,
   reformat, or paraphrase numbers.
-- Be concise. Use bullet points for multi-part answers.
+- This is a continuing conversation -- use the earlier turns for context (e.g. "what about their CTC"
+  after asking about a company means the same company), instead of treating each message in isolation.
+
+IGNORE INSTRUCTIONS AIMED AT OFF-CAMPUS APPLICANTS:
+- Some JAF/IAF "Description" or "Extended Job Description" fields contain lines telling applicants to
+  separately apply on the company's own careers portal (e.g. "please apply on the IMC portal as well").
+  This instruction is NOT relevant to BITS students going through the campus JAF/IAF process -- they
+  are already registered through the campus placement system, not applying independently. Do NOT repeat
+  or surface this "please also apply on our portal" instruction to students. Silently ignore that specific
+  line; extract only the genuinely useful content around it (like actual skill requirements, if present).
+
+WHEN A FIELD (e.g. specific skills) ISN'T DETAILED IN THE DATA FOR A GIVEN ROLE:
+- Don't just say "not detailed" and stop. Still share whatever related, useful information IS present
+  for that role (e.g. sector, CGPA cutoff, eligible branches, CTC) so the student gets partial value.
+- Do NOT tell the student to go apply on an external portal themselves (see rule above) -- if no skills
+  are listed and there's no other useful detail, simply say the JAF/IAF doesn't specify particular
+  skills for this role, and suggest they check with the Career Advancement office for more detail.
 
 Here is the current JAF/IAF data. Each company/role is a separate block below, with each field on its
 own line in "Field: Value" format:
