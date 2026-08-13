@@ -34,9 +34,9 @@ import google.generativeai as genai
 #   https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=SHEET_GID
 # SPREADSHEET_ID is the long string after /d/
 # SHEET_GID is the number after #gid= when you click each tab (JAF_Data, IAF_Data)
-SPREADSHEET_ID = "PUT_YOUR_SPREADSHEET_ID_HERE"
-JAF_GID = "0"                    # gid for the JAF_Data tab
-IAF_GID = "PUT_IAF_TAB_GID_HERE"  # gid for the IAF_Data tab
+SPREADSHEET_ID = "11yUcfa66UgRDn4nYgSJz8F_ShSzakE_-ElRBR9htZr8"
+JAF_GID = "329067337"                    # gid for the JAF_Data tab
+IAF_GID = "208521765"  # gid for the IAF_Data tab
 
 GEMINI_MODEL = "gemini-3.5-flash"  # current stable model as of Aug 2026; swap to "gemini-3.5-flash-lite" for higher free rate limits
 
