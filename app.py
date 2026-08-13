@@ -37,8 +37,7 @@ import google.generativeai as genai
 SPREADSHEET_ID = "11yUcfa66UgRDn4nYgSJz8F_ShSzakE_-ElRBR9htZr8"
 JAF_GID = "329067337"                    # gid for the JAF_Data tab
 IAF_GID = "208521765"  # gid for the IAF_Data tab
-
-GEMINI_MODEL = "gemini-3.5-flash"  # free-tier friendly; swap to "gemini-2.5-flash-lite" for higher free rate limits
+GEMINI_MODEL = "gemini-3.5-flash"  # current stable model as of Aug 2026; swap to "gemini-3.5-flash-lite" for higher free rate limits
 
 def csv_url(sheet_id, gid):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
@@ -91,21 +90,32 @@ You answer questions about company JAFs (Full-Time Placement job application for
 IAFs (Summer Internship application forms) -- covering CTC, eligible branches/courses,
 CGPA cutoff, sector, eligibility criteria, gender/backlog policy, and related fields.
 
-Rules:
-- Answer ONLY using the data provided below. Do not guess or use outside knowledge about companies.
+CRITICAL RULES:
+- Answer ONLY using the data provided below. Do not guess, infer, or use outside knowledge about companies.
+- Before answering, find the exact entry (or entries) matching the company/role the student asked about.
+  Match company names loosely (ignore case, minor spelling differences) but never invent a match if
+  none is close.
 - If a company or field isn't in the data, say so clearly rather than making something up.
-- Be concise and factual. Use bullet points for multi-part answers (e.g. listing several companies).
-- If a student asks something ambiguous (e.g. a company with multiple roles), ask which role they mean,
-  or list all matching entries.
-- CTC and CGPA values should be quoted exactly as they appear in the data.
+- If a company has multiple entries (e.g. multiple roles), list all of them or ask which role they mean.
+- Quote CTC, CGPA cutoff, and other values EXACTLY as they appear in the data below -- do not round,
+  reformat, or paraphrase numbers.
+- Be concise. Use bullet points for multi-part answers.
 
-Here is the current JAF/IAF data (CSV format):
+Here is the current JAF/IAF data. Each company/role is a separate block below, with each field on its
+own line in "Field: Value" format:
 
-{data_csv}
+{data_blocks}
 """
 
 def build_system_prompt(df: pd.DataFrame) -> str:
-    return SYSTEM_PROMPT.format(data_csv=df.to_csv(index=False))
+    # Format each row as a clearly delimited block (Field: Value per line) rather
+    # than raw CSV -- this is far more reliable for the model to parse correctly,
+    # especially with long, comma-containing text fields like Branches/Eligibility.
+    blocks = []
+    for _, row in df.iterrows():
+        lines = [f"{col}: {row[col]}" for col in df.columns if pd.notna(row[col]) and str(row[col]).strip() != ""]
+        blocks.append("---\n" + "\n".join(lines))
+    return SYSTEM_PROMPT.format(data_blocks="\n\n".join(blocks))
 
 # ==== CHAT UI ====
 if "messages" not in st.session_state:
@@ -127,6 +137,7 @@ if prompt := st.chat_input("Ask about a company's CTC, branches, CGPA cutoff..."
             model = genai.GenerativeModel(
                 model_name=GEMINI_MODEL,
                 system_instruction=build_system_prompt(data),
+                generation_config=genai.types.GenerationConfig(temperature=0),
             )
             # Gemini uses "user"/"model" roles (not "assistant"), and history
             # excludes the message we're about to send.
