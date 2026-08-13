@@ -38,7 +38,7 @@ SPREADSHEET_ID = "11yUcfa66UgRDn4nYgSJz8F_ShSzakE_-ElRBR9htZr8"
 JAF_GID = "329067337"                    # gid for the JAF_Data tab
 IAF_GID = "208521765"  # gid for the IAF_Data tab
 
-GEMINI_MODEL = "gemini-2.5-flash"  # free-tier friendly; swap to "gemini-2.5-flash-lite" for higher free rate limits
+GEMINI_MODEL = "gemini-3.5-flash"  # free-tier friendly; swap to "gemini-2.5-flash-lite" for higher free rate limits
 
 def csv_url(sheet_id, gid):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
